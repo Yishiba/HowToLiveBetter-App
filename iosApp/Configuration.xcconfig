@@ -1,0 +1,6 @@
+// 上架前确认最终的 Bundle ID 与开发团队
+
+PRODUCT_BUNDLE_IDENTIFIER = app.lifeguide
+MARKETING_VERSION = 0.1.0
+CURRENT_PROJECT_VERSION = 1
+TEAM_ID =
