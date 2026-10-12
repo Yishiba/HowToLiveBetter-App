@@ -119,7 +119,7 @@ object CorpusParser {
 
     /** README 里指向 book 目录下 md 文件的链接，去重后按路径排序（同 init()） */
     fun bookFiles(readme: String): List<String> =
-        Regex("""\]\((book/[^)]+\.md)\)""").findAll(readme).map { it.groupValues[1] }.toSortedSet().toList()
+        Regex("""\]\((book/[^)]+\.md)\)""").findAll(readme).map { it.groupValues[1] }.distinct().sorted().toList()
 
     fun parseFiles(readme: String, read: (String) -> String): List<Section> =
         parse(bookFiles(readme).joinToString("\n\n") { read(it).replace("\r\n", "\n") })
