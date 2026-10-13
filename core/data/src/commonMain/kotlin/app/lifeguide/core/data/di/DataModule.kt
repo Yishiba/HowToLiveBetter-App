@@ -2,6 +2,7 @@ package app.lifeguide.core.data.di
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import app.lifeguide.core.data.AppDirs
+import app.lifeguide.core.data.ChecklistRepository
 import app.lifeguide.core.data.ContentUpdateService
 import app.lifeguide.core.data.CorpusRepository
 import app.lifeguide.core.data.CorpusStore
@@ -37,5 +38,6 @@ val dataModule = module {
     singleOf(::CorpusRepository)
     single { CorpusUpdater(get(), get(), current = { get<CorpusRepository>().state.value }) }
     single { FilterRepository(get(), get(AppScope)) }
+    single { ChecklistRepository(get(), get(), get(AppScope)) }
     single { ContentUpdateService(get(), get(), get(), get(AppScope)) }
 }

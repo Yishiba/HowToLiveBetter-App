@@ -9,7 +9,11 @@ import app.lifeguide.core.data.CorpusManifest
 import app.lifeguide.core.data.CorpusRepository
 import app.lifeguide.core.data.FilterRepository
 import app.lifeguide.core.ui.Sharer
-import app.lifeguide.feature.browse.BrowseViewModel
+import app.lifeguide.feature.checklist.ChecklistViewModel
+import app.lifeguide.feature.find.FindViewModel
+import app.lifeguide.feature.find.SectionViewModel
+import app.lifeguide.feature.settings.OnboardingViewModel
+import app.lifeguide.core.data.ChecklistRepository
 import app.lifeguide.feature.entry.EntryViewModel
 import app.lifeguide.feature.settings.SettingsViewModel
 import kotlinx.coroutines.Dispatchers
@@ -54,7 +58,11 @@ class KoinGraphTest {
         koin.get<FilterRepository>()
         koin.get<ContentUpdateService>()
         koin.get<AppViewModel>()
-        koin.get<BrowseViewModel>()
+        koin.get<ChecklistRepository>()
+        koin.get<ChecklistViewModel>()
+        koin.get<FindViewModel>()
+        koin.get<SectionViewModel> { parametersOf("1") }
+        koin.get<OnboardingViewModel>()
         koin.get<SettingsViewModel>()
         koin.get<EntryViewModel> { parametersOf("1-1") }
     }

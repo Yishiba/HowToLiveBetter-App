@@ -20,8 +20,8 @@ class AppViewModel(
     updates: ContentUpdateService,
 ) : ViewModel() {
     val theme = prefs.theme.stateIn(viewModelScope, SharingStarted.Eagerly, ThemeMode.System)
-    // 读到之前先当已同意，免得每次启动闪一下对话框
-    val disclaimerAccepted = prefs.disclaimerAccepted.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+    /** null 表示还没读到偏好：这时什么都不画，免得老用户每次启动闪一下引导页 */
+    val onboarded = prefs.onboarded.map<Boolean, Boolean?> { it }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     val messages: Flow<String> = updates.events.map { e ->
         when (e) {
@@ -36,9 +36,5 @@ class AppViewModel(
             corpusRepository.ensureLoaded()
             updates.checkIfDue()
         }
-    }
-
-    fun acceptDisclaimer() {
-        viewModelScope.launch { prefs.acceptDisclaimer() }
     }
 }

@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -27,7 +26,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -42,6 +40,10 @@ import app.lifeguide.core.data.CorpusSource
 import app.lifeguide.core.data.ThemeMode
 import app.lifeguide.core.data.UpdateStatus
 import app.lifeguide.core.ui.Icons
+import app.lifeguide.core.ui.Labels
+import app.lifeguide.core.ui.Pill
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import org.koin.compose.viewmodel.koinViewModel
 
 internal const val DISCLAIMER =
@@ -60,6 +62,7 @@ internal fun SettingsScreen(
     val theme by vm.theme.collectAsStateWithLifecycle()
     val auto by vm.autoUpdate.collectAsStateWithLifecycle()
     val status by vm.updateStatus.collectAsStateWithLifecycle()
+    val profile by vm.profile.collectAsStateWithLifecycle()
     val uri = LocalUriHandler.current
 
     Scaffold(
@@ -76,6 +79,11 @@ internal fun SettingsScreen(
                 .padding(horizontal = 20.dp, vertical = 8.dp).navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            Heading("我的情况")
+            Body("带人群标签的建议（比如孕期、带娃、照顾老人），只有符合你的情况才会进清单。查找里始终能看到全部。")
+            ProfileChips(profile, vm::toggleProfile)
+
+            HorizontalDivider()
             Heading("正文版本")
             corpus?.let { c ->
                 val src = if (c.source == CorpusSource.Bundled) "随安装包内置" else "已联网更新"
@@ -152,12 +160,13 @@ private fun LinkRow(t: String, onClick: () -> Unit) = Row(
     Icon(Icons.OpenInNew, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
 }
 
+/** 「我的情况」的选项：取自筛选里「我的情况」那组，去掉「以上都不是」 */
+internal val PROFILE_OPTIONS = Labels.GROUPS.first { it.dim == "who" }.options.filter { it.value != "无" }
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun DisclaimerDialog(onAccept: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = {},
-        title = { Text("使用前请读一下") },
-        text = { Text(DISCLAIMER) },
-        confirmButton = { TextButton(onClick = onAccept) { Text("我知道了") } },
-    )
+internal fun ProfileChips(selected: Set<String>, onToggle: (String) -> Unit) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        for (o in PROFILE_OPTIONS) Pill(o.label, o.value in selected, onClick = { onToggle(o.value) })
+    }
 }

@@ -1,5 +1,7 @@
 # 架构
 
+界面与交互的设计见 [ux.md](ux.md)。
+
 目标：选成熟、稳定的技术；新功能能加成一个独立模块，不用改动已有功能的代码。
 
 ## 模块
@@ -9,7 +11,8 @@ androidApp ─┐                         iosApp（Xcode 壳，SwiftUI 承载 Co
             ├─► shared ◄──────────────┘
             │     导航（NavHost）、Koin 组装、内置正文快照、Shared.framework、桌面预览
             │
-            ├─► feature/browse    列表、检索、筛选
+            ├─► feature/checklist 清单（首页 Tab）
+            ├─► feature/find      查找 Tab：搜索、遇到事了、章节目录、章节页
             ├─► feature/entry     条目详情、分享
             ├─► feature/settings  关于与设置、免责声明
             │        │
@@ -64,14 +67,16 @@ androidApp ─┐                         iosApp（Xcode 壳，SwiftUI 承载 Co
 
 ```
 内置快照（compose 资源）─┐
-                         ├─► CorpusRepository.state ──► BrowseViewModel / EntryViewModel / SettingsViewModel
+                         ├─► CorpusRepository.state ──► Checklist / Find / Section / Entry / Settings 的 ViewModel
 下载快照（CorpusStore）──┘          ▲
                                     │ reload()
 ContentUpdateService ──► CorpusUpdater（GitHub API → jsDelivr / fastly / raw 镜像 → 校验 → 原子安装）
         │
         └─ events ──► AppViewModel ──► Snackbar
 
-FilterRepository（筛选条件 + 搜索词，持久化到 UserPreferences）──► BrowseViewModel（防抖后筛选）、EntryViewModel（高亮）
+FilterRepository（查找页的搜索词与筛选，持久化到 UserPreferences）──► FindViewModel（防抖后检索）、EntryViewModel（高亮）
+ChecklistRepository（核心条目 + 我加的 + 勾选，按「我的情况」过滤）──► ChecklistViewModel、EntryViewModel（底部按钮）
+ContentUpdateService 更新成功后记下新增和改动的条目（RecentChanges）──► 清单顶部提示、各列表的小圆点
 ```
 
 进程级单例都在 `core/data/.../di/DataModule.kt`。不该随页面结束而取消的活（下载更新、写偏好）跑在 `AppScope` 里。
@@ -95,6 +100,9 @@ FilterRepository（筛选条件 + 搜索词，持久化到 UserPreferences）─
 | `CorpusUpdaterTest` | `core/data` | 镜像回退、截断下载、全部镜像挂掉、远端更旧 |
 | `CorpusRepositoryTest` | `core/data` | 内置版与下载版之间的选择、旧快照清理、并发只加载一次 |
 | `UpstreamAcceptanceTest` | `core/data` | 这份正文能通过 App 联网更新时的校验（上游格式一变，两边解析会一起错，对拍照样通过，只有这条能抓到） |
+| `GuideTest` | `core/corpus` | 产品规则在真实正文上成立：核心条目的定义、标题不重复（清单按标题记勾）、每节都归入了场景、「遇到事了」指向存在的节、更新差异不把改条号当改动 |
+| `FilterTest` | `core/corpus` | 清单的人群过滤：没填情况时带标签的条目不进清单 |
+| `ChecklistTest` | `core/data` | 清单由核心条目和「我加的」组成，勾选按标题记 |
 | `KoinGraphTest` | `shared` | 依赖图完整；内置正文确实打进了资源 |
 
 判断成败看 `tools/ci/check-test-results.sh`（读 JUnit XML，要求用例数大于 0、失败数为 0），不只看 Gradle 的退出码。CI 配置在 `.github/workflows/`：

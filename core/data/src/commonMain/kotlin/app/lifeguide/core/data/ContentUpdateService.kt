@@ -1,5 +1,6 @@
 package app.lifeguide.core.data
 
+import app.lifeguide.core.corpus.CorpusChanges
 import co.touchlab.kermit.Logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -61,7 +62,13 @@ class ContentUpdateService(
             val r = updater.check()
             when (r) {
                 is UpdateResult.Updated -> {
-                    repository.reload()
+                    val before = repository.state.value
+                    val after = repository.reload()
+                    // 记下新增和改动的条目，清单顶部提示一次，用户关掉为止
+                    if (before != null) {
+                        val changes = CorpusChanges.between(before.corpus, after.corpus)
+                        if (!changes.isEmpty) prefs.setRecentChanges(RecentChanges(r.manifest.commitDate, changes))
+                    }
                     log.i { "正文已更新到 ${r.manifest.commit}" }
                     _events.emit(UpdateEvent.Updated(r.manifest))
                 }

@@ -19,4 +19,5 @@ fun NavGraphBuilder.settingsScreen(snackbar: SnackbarHostState, onBack: () -> Un
 
 val settingsModule = module {
     viewModelOf(::SettingsViewModel)
+    viewModelOf(::OnboardingViewModel)
 }

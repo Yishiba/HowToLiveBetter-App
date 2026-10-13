@@ -22,7 +22,8 @@ dependencyResolutionManagement {
 include(":androidApp")
 include(":shared")
 // 功能：一个功能一个模块，互不依赖
-include(":feature:browse")
+include(":feature:checklist")
+include(":feature:find")
 include(":feature:entry")
 include(":feature:settings")
 // 基础层：corpus（纯领域逻辑）← data（数据来源）、ui（设计系统）

@@ -36,6 +36,13 @@ object Filter {
         return e.who.any { g -> g.all(::has) }
     }
 
+    /**
+     * 清单用的人群判断，比 [fitsMe] 严：带人群标签的条目，只有符合「我的情况」才算；没填情况就不算。
+     * 没标人群的条目人人适用。查找里主动查的东西不用这条过滤。
+     */
+    fun fitsProfile(e: Entry, profile: Set<String>): Boolean =
+        e.who.isEmpty() || (profile.isNotEmpty() && fitsMe(e, profile))
+
     /** apply() 里除章节外的条件；章节单独判断，是为了算每节的命中数（网页侧栏也这么算） */
     fun matchesExceptSec(e: Entry, s: FilterState, terms: List<String> = s.terms): Boolean {
         if (s.ratio.isNotEmpty() && e.ratio !in s.ratio) return false

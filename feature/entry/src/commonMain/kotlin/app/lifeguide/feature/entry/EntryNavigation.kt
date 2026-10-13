@@ -14,8 +14,8 @@ data class EntryRoute(val id: String)
 
 fun NavController.navigateToEntry(id: String) = navigate(EntryRoute(id))
 
-fun NavGraphBuilder.entryScreen(onBack: () -> Unit) {
-    composable<EntryRoute> { EntryScreen(id = it.toRoute<EntryRoute>().id, onBack = onBack) }
+fun NavGraphBuilder.entryScreen(onOpenSection: (n: String) -> Unit, onBack: () -> Unit) {
+    composable<EntryRoute> { EntryScreen(id = it.toRoute<EntryRoute>().id, onOpenSection = onOpenSection, onBack = onBack) }
 }
 
 val entryModule = module {

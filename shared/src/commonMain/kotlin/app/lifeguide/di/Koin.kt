@@ -3,7 +3,8 @@ package app.lifeguide.di
 import app.lifeguide.AppViewModel
 import app.lifeguide.core.data.BundledCorpusSource
 import app.lifeguide.core.data.di.dataModule
-import app.lifeguide.feature.browse.browseModule
+import app.lifeguide.feature.checklist.checklistModule
+import app.lifeguide.feature.find.findModule
 import app.lifeguide.feature.entry.entryModule
 import app.lifeguide.feature.settings.settingsModule
 import app.lifeguide.resources.Res
@@ -32,4 +33,4 @@ fun initKoin(platform: Module): KoinApplication = startKoin {
 }
 
 /** 除平台模块外的全部模块；测试也用它校验依赖图是否完整 */
-internal val appModules: List<Module> = listOf(dataModule, appModule, browseModule, entryModule, settingsModule)
+internal val appModules: List<Module> = listOf(dataModule, appModule, checklistModule, findModule, entryModule, settingsModule)

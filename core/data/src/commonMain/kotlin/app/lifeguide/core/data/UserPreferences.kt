@@ -6,7 +6,10 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
+import app.lifeguide.core.corpus.CorpusChanges
 import app.lifeguide.core.corpus.FilterState
+import kotlinx.serialization.Serializable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -21,7 +24,12 @@ class UserPreferences(private val ds: DataStore<Preferences>) {
         val theme = stringPreferencesKey("theme")
         val autoUpdate = booleanPreferencesKey("auto_update")
         val lastCheck = longPreferencesKey("last_check")
-        val disclaimer = booleanPreferencesKey("disclaimer_accepted")
+        // 键名沿用旧版：首次启动页里包含免责说明，旧版点过「我知道了」的不用再看一次
+        val onboarded = booleanPreferencesKey("disclaimer_accepted")
+        val profile = stringSetPreferencesKey("profile")
+        val done = stringSetPreferencesKey("checklist_done")
+        val added = stringSetPreferencesKey("checklist_added")
+        val changes = stringPreferencesKey("recent_changes")
     }
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -48,8 +56,40 @@ class UserPreferences(private val ds: DataStore<Preferences>) {
         ds.edit { it[K.lastCheck] = ms }
     }
 
-    val disclaimerAccepted: Flow<Boolean> = ds.data.map { it[K.disclaimer] ?: false }
-    suspend fun acceptDisclaimer() {
-        ds.edit { it[K.disclaimer] = true }
+    /** 看过首次启动页（免责说明 + 我的情况） */
+    val onboarded: Flow<Boolean> = ds.data.map { it[K.onboarded] ?: false }
+    suspend fun finishOnboarding() {
+        ds.edit { it[K.onboarded] = true }
+    }
+
+    /** 我的情况：原书人群标签里符合自己的那几个（怀孕、婴幼儿、孩子、老人、35岁、60岁、女性） */
+    val profile: Flow<Set<String>> = ds.data.map { it[K.profile] ?: emptySet() }
+    suspend fun setProfile(v: Set<String>) {
+        ds.edit { it[K.profile] = v }
+    }
+
+    /** 清单里打了勾的条目，按 [app.lifeguide.core.corpus.key] 记 */
+    val done: Flow<Set<String>> = ds.data.map { it[K.done] ?: emptySet() }
+    /** 用户从别处加入清单的条目 */
+    val added: Flow<Set<String>> = ds.data.map { it[K.added] ?: emptySet() }
+
+    suspend fun setDone(key: String, value: Boolean) {
+        ds.edit { p -> p[K.done] = (p[K.done] ?: emptySet()).let { if (value) it + key else it - key } }
+    }
+
+    suspend fun setAdded(key: String, value: Boolean) {
+        ds.edit { p -> p[K.added] = (p[K.added] ?: emptySet()).let { if (value) it + key else it - key } }
+    }
+
+    /** 最近一次联网更新带来的改动，用户关掉提示前一直在 */
+    val recentChanges: Flow<RecentChanges?> = ds.data.map { p ->
+        p[K.changes]?.let { runCatching { json.decodeFromString(RecentChanges.serializer(), it) }.getOrNull() }
+    }
+
+    suspend fun setRecentChanges(v: RecentChanges?) {
+        ds.edit { p -> if (v == null) p.remove(K.changes) else p[K.changes] = json.encodeToString(RecentChanges.serializer(), v) }
     }
 }
+
+@Serializable
+data class RecentChanges(val commitDate: String, val changes: CorpusChanges)

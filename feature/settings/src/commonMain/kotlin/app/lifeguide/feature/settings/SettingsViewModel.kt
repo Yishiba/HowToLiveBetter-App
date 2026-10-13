@@ -22,6 +22,9 @@ class SettingsViewModel(
     val updateStatus: StateFlow<UpdateStatus> = updates.status
     val theme = prefs.theme.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ThemeMode.System)
     val autoUpdate = prefs.autoUpdate.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+    val profile = prefs.profile.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    fun toggleProfile(v: String) = viewModelScope.launch { prefs.setProfile(profile.value.let { if (v in it) it - v else it + v }) }
 
     fun setTheme(t: ThemeMode) = viewModelScope.launch { prefs.setTheme(t) }
     fun setAutoUpdate(v: Boolean) = viewModelScope.launch { prefs.setAutoUpdate(v) }

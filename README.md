@@ -10,13 +10,13 @@
 | `core/corpus` | 纯领域逻辑：正文模型、解析、拆块、筛选 |
 | `core/data` | 选用哪份正文、联网更新、本机偏好 |
 | `core/ui` | 设计系统：配色、图标、徽章、正文渲染 |
-| `feature/browse`、`feature/entry`、`feature/settings` | 列表与筛选、条目详情、关于与设置 |
+| `feature/checklist`、`feature/find`、`feature/entry`、`feature/settings` | 清单（首页）、查找（搜索、遇到事了、章节）、条目页、设置与首次启动页 |
 | `shared` | 导航、依赖注入组装、内置正文快照；iOS 的 Shared.framework |
 | `androidApp/`、`iosApp/` | 两端入口 |
 | `build-logic/` | Gradle 约定插件，各模块共用的构建配置 |
 | `tools/golden/` | 用上游 `index.html` 自己的 JS 导出标准答案，供对拍 |
 
-模块划分、依赖规则、选型理由、如何新增功能，见 [docs/architecture.md](docs/architecture.md)。
+界面设计与取舍见 [docs/ux.md](docs/ux.md)；模块划分、依赖规则、选型理由、如何新增功能，见 [docs/architecture.md](docs/architecture.md)。
 
 正文怎么进 App：`:shared:syncCorpus` 把 `upstream/` 的 README 与 `book/*.md` 打进 compose 资源；启动后每 12 小时最多一次问 GitHub 上游 main 的 commit，比内置的新就按 commit 从 jsDelivr（失败换 fastly、raw.githubusercontent）下载，解析校验通过才切换。
 

@@ -1,6 +1,7 @@
 package app.lifeguide.core.ui.theme
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -8,65 +9,73 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 
-// 配色取自上游检索页（VitePress 默认主题），App 和网页看起来是同一本书
+/**
+ * 配色只有三种角色：一个品牌绿；争议用的红；其余全是灰阶。见 docs/ux.md「视觉」。
+ * 页面底色是浅灰，卡片是白色，靠底色差和细边分层，不用阴影。
+ */
 @Immutable
-data class Tones(
-    val brand: Color, val brandSoft: Color,
-    val green: Color, val greenSoft: Color,
-    val yellow: Color, val yellowSoft: Color,
-    val red: Color, val redSoft: Color,
-    val gray: Color, val graySoft: Color,
+data class ExtraColors(
+    /** 搜索关键词高亮 */
     val mark: Color,
+    /** 有争议 */
+    val danger: Color,
+    /** 卡片细边 */
+    val hairline: Color,
 )
 
-private val LightTones = Tones(
-    brand = Color(0xFF3451B2), brandSoft = Color(0x24646CFF),
-    green = Color(0xFF18794E), greenSoft = Color(0x2410B981),
-    yellow = Color(0xFF915930), yellowSoft = Color(0x24EAB308),
-    red = Color(0xFFB8272C), redSoft = Color(0x24F43F5E),
-    gray = Color(0xFF565A5F), graySoft = Color(0x248E96AA),
-    mark = Color(0x55FACC15),
-)
-private val DarkTones = Tones(
-    brand = Color(0xFFA8B1FF), brandSoft = Color(0x29646CFF),
-    green = Color(0xFF3DD68C), greenSoft = Color(0x2910B981),
-    yellow = Color(0xFFF9B44E), yellowSoft = Color(0x29EAB308),
-    red = Color(0xFFF66F81), redSoft = Color(0x29F43F5E),
-    gray = Color(0xFFA4A8AE), graySoft = Color(0x298E96AA),
-    mark = Color(0x66CA8A04),
-)
+private val LightExtra = ExtraColors(mark = Color(0x55FACC15), danger = Color(0xFFC2413A), hairline = Color(0xFFE6E8E5))
+private val DarkExtra = ExtraColors(mark = Color(0x66CA8A04), danger = Color(0xFFF2857D), hairline = Color(0xFF2C302D))
 
-val LocalTones = staticCompositionLocalOf { LightTones }
+val LocalExtraColors = staticCompositionLocalOf { LightExtra }
 
 private val LightScheme = lightColorScheme(
-    primary = Color(0xFF3451B2), onPrimary = Color.White,
-    primaryContainer = Color(0xFFE3E6FB), onPrimaryContainer = Color(0xFF1F2E73),
-    secondaryContainer = Color(0xFFE3E6FB), onSecondaryContainer = Color(0xFF1F2E73),
-    background = Color.White, onBackground = Color(0xFF3C3C43),
-    surface = Color.White, onSurface = Color(0xFF3C3C43),
-    surfaceVariant = Color(0xFFF6F6F7), onSurfaceVariant = Color(0xC73C3C43),
-    surfaceContainer = Color(0xFFF6F6F7), surfaceContainerLow = Color(0xFFF9F9FA),
-    surfaceContainerHigh = Color(0xFFF1F1F2), surfaceContainerHighest = Color(0xFFEBEBEC),
-    surfaceContainerLowest = Color.White,
-    outline = Color(0xFFC2C2C4), outlineVariant = Color(0xFFE2E2E3),
+    primary = Color(0xFF2F7D57), onPrimary = Color.White,
+    primaryContainer = Color(0xFFE4F2EA), onPrimaryContainer = Color(0xFF1B5238),
+    secondaryContainer = Color(0xFFE4F2EA), onSecondaryContainer = Color(0xFF1B5238),
+    background = Color(0xFFF4F5F3), onBackground = Color(0xFF1D211F),
+    surface = Color(0xFFF4F5F3), onSurface = Color(0xFF1D211F),
+    surfaceVariant = Color(0xFFECEEEB), onSurfaceVariant = Color(0xFF656C67),
+    surfaceContainerLowest = Color.White, surfaceContainerLow = Color.White,
+    surfaceContainer = Color(0xFFF4F5F3), surfaceContainerHigh = Color(0xFFECEEEB),
+    surfaceContainerHighest = Color(0xFFE4E7E3),
+    outline = Color(0xFFC9CDC9), outlineVariant = Color(0xFFE6E8E5),
+    error = Color(0xFFC2413A),
 )
+
 private val DarkScheme = darkColorScheme(
-    primary = Color(0xFFA8B1FF), onPrimary = Color(0xFF1B1B1F),
-    primaryContainer = Color(0xFF2F3770), onPrimaryContainer = Color(0xFFDDE1FF),
-    secondaryContainer = Color(0xFF2F3770), onSecondaryContainer = Color(0xFFDDE1FF),
-    background = Color(0xFF1B1B1F), onBackground = Color(0xDBFFFFF5),
-    surface = Color(0xFF1B1B1F), onSurface = Color(0xDBFFFFF5),
-    surfaceVariant = Color(0xFF202127), onSurfaceVariant = Color(0x99EBEBF5),
-    surfaceContainer = Color(0xFF202127), surfaceContainerLow = Color(0xFF1E1E22),
-    surfaceContainerHigh = Color(0xFF2B2B2F), surfaceContainerHighest = Color(0xFF323238),
-    surfaceContainerLowest = Color(0xFF161618),
-    outline = Color(0xFF4A4A50), outlineVariant = Color(0xFF2E2E32),
+    primary = Color(0xFF7CC59A), onPrimary = Color(0xFF0D2A1B),
+    primaryContainer = Color(0xFF1E3A2B), onPrimaryContainer = Color(0xFFBFE5CC),
+    secondaryContainer = Color(0xFF1E3A2B), onSecondaryContainer = Color(0xFFBFE5CC),
+    background = Color(0xFF121413), onBackground = Color(0xFFE4E7E4),
+    surface = Color(0xFF121413), onSurface = Color(0xFFE4E7E4),
+    surfaceVariant = Color(0xFF1F2321), onSurfaceVariant = Color(0xFFA2A9A4),
+    surfaceContainerLowest = Color(0xFF1A1D1B), surfaceContainerLow = Color(0xFF1A1D1B),
+    surfaceContainer = Color(0xFF121413), surfaceContainerHigh = Color(0xFF242826),
+    surfaceContainerHighest = Color(0xFF2C302E),
+    outline = Color(0xFF454A47), outlineVariant = Color(0xFF2C302D),
+    error = Color(0xFFF2857D),
+)
+
+// 中文正文行高放宽一些，标题收紧
+private val Base = Typography()
+private val AppTypography = Typography(
+    headlineSmall = Base.headlineSmall.copy(fontSize = 24.sp, lineHeight = 32.sp, fontWeight = FontWeight.SemiBold),
+    titleLarge = Base.titleLarge.copy(fontSize = 22.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold),
+    titleMedium = Base.titleMedium.copy(fontSize = 16.sp, lineHeight = 23.sp, fontWeight = FontWeight.SemiBold),
+    titleSmall = Base.titleSmall.copy(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
+    bodyLarge = Base.bodyLarge.copy(fontSize = 16.sp, lineHeight = 26.sp),
+    bodyMedium = Base.bodyMedium.copy(fontSize = 14.sp, lineHeight = 22.sp),
+    bodySmall = Base.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
+    labelMedium = Base.labelMedium.copy(fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Normal),
 )
 
 @Composable
 fun LifeGuideTheme(darkTheme: Boolean, content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalTones provides if (darkTheme) DarkTones else LightTones) {
-        MaterialTheme(colorScheme = if (darkTheme) DarkScheme else LightScheme, content = content)
+    CompositionLocalProvider(LocalExtraColors provides if (darkTheme) DarkExtra else LightExtra) {
+        MaterialTheme(colorScheme = if (darkTheme) DarkScheme else LightScheme, typography = AppTypography, content = content)
     }
 }
+
