@@ -6,7 +6,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import app.lifeguide.AndroidAppEnv
 import app.lifeguide.App
 
 class MainActivity : ComponentActivity() {
@@ -18,7 +17,7 @@ class MainActivity : ComponentActivity() {
                 val style = if (dark) SystemBarStyle.dark(Color.TRANSPARENT)
                 else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
                 enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
-            }) { AndroidAppEnv(applicationContext) }
+            })
         }
     }
 }

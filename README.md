@@ -7,22 +7,29 @@
 | 目录 | 内容 |
 |---|---|
 | `upstream/` | 上游仓库（git submodule，锁定 commit），内置正文快照的来源 |
-| `shared/` | KMP 模块：`corpus/` 解析与拆块、`filter/` 筛选、`data/` 仓库/更新/偏好、`ui/` 全部界面 |
-| `androidApp/` | Android 入口 |
-| `iosApp/` | Xcode 壳工程，SwiftUI 承载 Compose |
+| `core/corpus` | 纯领域逻辑：正文模型、解析、拆块、筛选 |
+| `core/data` | 选用哪份正文、联网更新、本机偏好 |
+| `core/ui` | 设计系统：配色、图标、徽章、正文渲染 |
+| `feature/browse`、`feature/entry`、`feature/settings` | 列表与筛选、条目详情、关于与设置 |
+| `shared` | 导航、依赖注入组装、内置正文快照；iOS 的 Shared.framework |
+| `androidApp/`、`iosApp/` | 两端入口 |
+| `build-logic/` | Gradle 约定插件，各模块共用的构建配置 |
 | `tools/golden/` | 用上游 `index.html` 自己的 JS 导出标准答案，供对拍 |
+
+模块划分、依赖规则、选型理由、如何新增功能，见 [docs/architecture.md](docs/architecture.md)。
 
 正文怎么进 App：`:shared:syncCorpus` 把 `upstream/` 的 README 与 `book/*.md` 打进 compose 资源；启动后每 12 小时最多一次问 GitHub 上游 main 的 commit，比内置的新就按 commit 从 jsDelivr（失败换 fastly、raw.githubusercontent）下载，解析校验通过才切换。
 
 ## 解析器为什么可信
 
-`CorpusParser`、`SplitRules`、`Filter` 逐行移植自上游 `index.html` 的 `parseReadme()`、`<split-rules>`、`apply()`/`fitsMe()`。`jvmTest` 拿上游原函数跑出来的 golden 逐字段比对全部条目和 17 组筛选；`diffCatchesChanges` 是比对函数自己的对照组。上游改了解析或拆分规则，测试会红。
+`CorpusParser`、`SplitRules`、`Filter` 逐行移植自上游 `index.html` 的 `parseReadme()`、`<split-rules>`、`apply()`/`fitsMe()`。`:core:corpus:jvmTest` 拿上游原函数跑出来的 golden 逐字段比对全部条目和 17 组筛选；`diffCatchesChanges` 是比对函数自己的对照组。上游改了解析或拆分规则，测试会红。
 
 ## 常用命令
 
 ```bash
-./gradlew :shared:jvmTest            # 对拍 + 更新器测试（需要 node）
+./gradlew jvmTest                    # 全部单元测试，含对拍（需要 node）
 ./gradlew :androidApp:assembleDebug  # Android 调试包
+tools/ci/check-test-results.sh core/corpus core/data shared  # 按测试报告判成败
 ```
 
 iOS：用 Xcode 打开 `iosApp/iosApp.xcodeproj` 直接运行。命令行构建：
@@ -31,13 +38,13 @@ iOS：用 Xcode 打开 `iosApp/iosApp.xcodeproj` 直接运行。命令行构建�
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project iosApp/iosApp.xcodeproj -target iosApp -sdk iphonesimulator -configuration Debug ARCHS=arm64 build
 ```
 
-判测试成败看 `shared/build/test-results/jvmTest/*.xml` 里的 `failures`/`errors`/`tests`，不只看 BUILD SUCCESSFUL。
+判测试成败看测试报告（上面那个脚本），不只看 BUILD SUCCESSFUL。克隆时带上子模块：`git clone --recurse-submodules`。
 
 ## 升级内置正文
 
 ```bash
 git -C upstream fetch && git -C upstream checkout origin/main
-./gradlew :shared:jvmTest
+./gradlew jvmTest
 git add upstream && git commit -m "内置正文更新到 $(git -C upstream log -1 --format=%h)"
 ```
 

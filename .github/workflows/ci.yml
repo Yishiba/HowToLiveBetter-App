@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-android:
+    name: 单元测试 + Android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: gradle/actions/setup-gradle@v4
+      - name: 测试（含与上游网页 JS 的对拍）与 Android 调试包
+        run: ./gradlew jvmTest :androidApp:assembleDebug
+      - name: 按测试报告判成败
+        run: tools/ci/check-test-results.sh core/corpus core/data shared
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: '**/build/test-results/jvmTest/*.xml'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: androidApp/build/outputs/apk/debug/*.apk
+
+  ios:
+    name: iOS 模拟器构建
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: xcodebuild（构建阶段会调用 Gradle 产出 Shared.framework）
+        run: >
+          xcodebuild -project iosApp/iosApp.xcodeproj -target iosApp
+          -sdk iphonesimulator -configuration Debug ARCHS=arm64
+          CODE_SIGNING_ALLOWED=NO build
