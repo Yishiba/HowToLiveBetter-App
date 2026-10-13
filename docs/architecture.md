@@ -95,7 +95,7 @@ ContentUpdateService 更新成功后记下新增和改动的条目（RecentChang
 
 | 测试 | 位置 | 守住什么 |
 |---|---|---|
-| `GoldenTest` | `core/corpus` | 解析、拆块、筛选与上游网页 JS 逐字段一致（687 条，17 组筛选），自带对照组 |
+| `GoldenTest` | `core/corpus` | 解析、拆块、筛选、交叉引用与上游网页 JS 逐处一致（687 条，17 组筛选，1301 处引用），自带对照组 |
 | `InlineMdTest` | `core/corpus` | 行内 Markdown 切分 |
 | `CorpusUpdaterTest` | `core/data` | 镜像回退、截断下载、全部镜像挂掉、远端更旧 |
 | `CorpusRepositoryTest` | `core/data` | 内置版与下载版之间的选择、旧快照清理、并发只加载一次 |

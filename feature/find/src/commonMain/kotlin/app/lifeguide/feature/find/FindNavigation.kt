@@ -22,8 +22,10 @@ fun NavGraphBuilder.findScreen(onOpenSection: (n: String) -> Unit, onOpenEntry: 
     composable<FindRoute> { FindScreen(onOpenSection = onOpenSection, onOpenEntry = onOpenEntry) }
 }
 
-fun NavGraphBuilder.sectionScreen(onOpenEntry: (id: String) -> Unit, onBack: () -> Unit) {
-    composable<SectionRoute> { SectionScreen(n = it.toRoute<SectionRoute>().n, onOpenEntry = onOpenEntry, onBack = onBack) }
+fun NavGraphBuilder.sectionScreen(onOpenEntry: (id: String) -> Unit, onOpenSection: (n: String) -> Unit, onBack: () -> Unit) {
+    composable<SectionRoute> {
+        SectionScreen(n = it.toRoute<SectionRoute>().n, onOpenEntry = onOpenEntry, onOpenSection = onOpenSection, onBack = onBack)
+    }
 }
 
 val findModule = module {

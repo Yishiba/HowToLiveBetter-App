@@ -96,8 +96,8 @@ private fun Main(snackbar: SnackbarHostState) {
         NavHost(nav, startDestination = ChecklistRoute, modifier = Modifier.padding(pad)) {
             checklistScreen(onOpenEntry = nav::navigateToEntry, onOpenSettings = nav::navigateToSettings)
             findScreen(onOpenSection = nav::navigateToSection, onOpenEntry = nav::navigateToEntry)
-            sectionScreen(onOpenEntry = nav::navigateToEntry, onBack = { nav.popBackStack() })
-            entryScreen(onOpenSection = nav::navigateToSection, onBack = { nav.popBackStack() })
+            sectionScreen(onOpenEntry = nav::navigateToEntry, onOpenSection = nav::navigateToSection, onBack = { nav.popBackStack() })
+            entryScreen(onOpenEntry = nav::navigateToEntry, onOpenSection = nav::navigateToSection, onBack = { nav.popBackStack() })
             settingsScreen(snackbar, onBack = { nav.popBackStack() })
         }
     }

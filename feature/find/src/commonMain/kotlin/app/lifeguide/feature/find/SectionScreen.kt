@@ -32,7 +32,9 @@ import app.lifeguide.core.ui.EntryCard
 import app.lifeguide.core.ui.EntryText
 import app.lifeguide.core.ui.Icons
 import app.lifeguide.core.ui.Pill
+import app.lifeguide.core.ui.XrefSheet
 import app.lifeguide.core.ui.rememberInlineText
+import app.lifeguide.core.ui.rememberXrefNavigator
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -41,6 +43,7 @@ import org.koin.core.parameter.parametersOf
 internal fun SectionScreen(
     n: String,
     onOpenEntry: (String) -> Unit,
+    onOpenSection: (String) -> Unit,
     onBack: () -> Unit,
     vm: SectionViewModel = koinViewModel(key = "section-$n") { parametersOf(n) },
 ) {
@@ -48,6 +51,7 @@ internal fun SectionScreen(
     val filter by vm.filter.collectAsStateWithLifecycle()
     var showFilter by rememberSaveable { mutableStateOf(false) }
     var introOpen by rememberSaveable { mutableStateOf(false) }
+    val xrefNav = rememberXrefNavigator(onOpenEntry, onOpenSection)
 
     Scaffold(
         topBar = {
@@ -82,7 +86,8 @@ internal fun SectionScreen(
                             val paras = if (introOpen) s.section.intro else s.section.intro.take(1)
                             for (p in paras) {
                                 Text(
-                                    rememberInlineText(p),
+                                    // 展开后导读里的引用可点；收起时整张卡片是展开按钮，引用不单独响应
+                                    if (introOpen) rememberInlineText(p, xref = s.xref, onXref = xrefNav::open) else rememberInlineText(p),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = if (introOpen) Int.MAX_VALUE else 2,
@@ -123,4 +128,5 @@ internal fun SectionScreen(
     }
 
     if (showFilter) FilterSheet(filter, shown = ui?.entries?.size, onUpdate = vm::update, onDismiss = { showFilter = false })
+    ui?.let { XrefSheet(xrefNav, it.xref.corpus) }
 }

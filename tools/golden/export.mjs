@@ -91,8 +91,67 @@ const FILTERS = [
   { name: '空结果', q: '这个词不可能出现在书里zzqq' },
 ].map(f => ({ ...f, ids: run(f) }));
 
-const golden = { files, sectionCount: outSections.length, entryCount: entries.length, sections: outSections, filters: FILTERS };
+// ---------- 交叉引用：「见第 8 节第 16 条」「本节第 3 条」「第 9 节」 ----------
+// NUMS、XREF_RE、xrefKeys 和链接切分用的几个正则原样从 index.html 抠出来跑。
+// 下面两个循环是照抄的（原函数 renderText / xrefInto 和 DOM 绑在一起没法单独跑），改动时要对照着改：
+// ① plainSegments 照 renderText：只有链接和粗体之外的普通文字才做引用识别，裸链接后的尾巴也算普通文字；
+// ② xrefIn 照 xrefInto 里的匹配循环：解析不到真实条目或节的不算引用。
+const xcode = [
+  grab(/^const URL_RE = .*$/m, 'URL_RE'),
+  grab(/^function trimUrl\(u\)\{[\s\S]*?\n\}/m, 'trimUrl()'),
+  grab(/^const MD_LINK_RE = .*$/m, 'MD_LINK_RE'),
+  grab(/^const BOLD_RE = .*$/m, 'BOLD_RE'),
+  grab(/^const unescMd = .*$/m, 'unescMd'),
+  grab(/^const LINK_RE = .*$/m, 'LINK_RE'),
+  grab(/^const NUMS = .*$/m, 'NUMS'),
+  grab(/^const XREF_RE = .*$/m, 'XREF_RE'),
+  grab(/^const xrefKeys = [\s\S]*?\n\};/m, 'xrefKeys'),
+  'this.LINK_RE = LINK_RE; this.XREF_RE = XREF_RE; this.xrefKeys = xrefKeys; this.unescMd = unescMd; this.trimUrl = trimUrl;',
+].join('\n');
+const x = { ITEMS: new Map(), SECS: new Map() };
+vm.runInNewContext(xcode, x);
+for (const s of sections) { x.SECS.set(s.n, s); for (const e of s.entries) x.ITEMS.set(`${s.n}-${e.n}`, e); }
+
+function plainSegments(text) {
+  const segs = [];
+  let last = 0, m;
+  x.LINK_RE.lastIndex = 0;
+  while ((m = x.LINK_RE.exec(text))) {
+    segs.push(text.slice(last, m.index));
+    last = m.index + m[0].length;
+    if (m[4] !== undefined) continue;
+    if (m[3]) { segs.push(x.trimUrl(m[3])[1]); continue; }
+  }
+  segs.push(text.slice(last));
+  return segs.filter(Boolean).map(x.unescMd);
+}
+function xrefIn(s, cur) {
+  const out = [];
+  let m;
+  x.XREF_RE.lastIndex = 0;
+  while ((m = x.XREF_RE.exec(s))) {
+    const keys = m[5] != null
+      ? String(m[5]).split('、').map(v => v.trim()).filter(v => x.SECS.has(v)).map(v => 's' + v)
+      : x.xrefKeys(m[1] ?? cur, m[2] ?? m[3] ?? m[4] ?? '');
+    if (!keys.length) continue;
+    out.push([m[0], ...keys]);
+  }
+  return out;
+}
+const xrefsOf = (texts, cur) => texts.flatMap(t => plainSegments(t).flatMap(seg => xrefIn(seg, cur)));
+let xrefCount = 0;
+for (const s of outSections) {
+  s.introXrefs = xrefsOf(s.intro, s.n);
+  xrefCount += s.introXrefs.length;
+  for (const e of s.entries) {
+    // 字段顺序照 renderCard：标题、成本、说人话、收益（拆块后）、备注（拆块后）、来源（拆条后）
+    e.xrefs = xrefsOf([e.title, e.cost, e.human, ...e.gainChunks, ...e.noteChunks, ...e.srcParts], e.sec);
+    xrefCount += e.xrefs.length;
+  }
+}
+
+const golden = { files, sectionCount: outSections.length, entryCount: entries.length, sections: outSections, filters: FILTERS, xrefCount };
 mkdirSync(dirname(resolve(out)), { recursive: true });
 writeFileSync(out, JSON.stringify(golden));
 console.log(`golden：${files.length} 个文件，${outSections.length} 节，${entries.length} 条，${FILTERS.length} 组筛选`
-  + `（${FILTERS.map(f => f.ids.length).join('/')}）`);
+  + `（${FILTERS.map(f => f.ids.length).join('/')}），${xrefCount} 处交叉引用`);

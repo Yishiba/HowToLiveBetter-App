@@ -9,6 +9,8 @@ sealed interface Inline {
     data class Link(val label: String, val href: String) : Inline
     /** 裸链接或 <链接> */
     data class Url(val url: String) : Inline
+    /** 交叉引用，见 [Xref] */
+    data class Xref(val text: String, val targets: List<XrefTarget>) : Inline
 }
 
 /**
@@ -55,8 +57,9 @@ object InlineMd {
     /**
      * @param urlsLast 来源栏用：裸链接攒到末尾各占一行，正文读起来不被长链接打断；
      *   被攒走的链接两侧只剩分隔符（顿号、逗号、空白）时，分隔符一并去掉
+     * @param xref 给了就把普通文字里的「第 X 条」「第 X 节」切成 [Inline.Xref]；链接文字和加粗里的不认，同网页
      */
-    fun parse(text: String, urlsLast: Boolean = false): List<Inline> {
+    fun parse(text: String, urlsLast: Boolean = false, xref: XrefContext? = null): List<Inline> {
         val out = mutableListOf<Inline>()
         val held = mutableListOf<String>()
         var justHeld = false
@@ -64,7 +67,8 @@ object InlineMd {
             if (s.isEmpty()) return
             if (justHeld && SEPARATOR_ONLY.matches(s)) return
             justHeld = false
-            out += Inline.Text(unescape(s))
+            val plain = unescape(s)
+            if (xref == null) out += Inline.Text(plain) else out += Xref.split(plain, xref)
         }
         var last = 0
         for (m in LINK_RE.findAll(text)) {

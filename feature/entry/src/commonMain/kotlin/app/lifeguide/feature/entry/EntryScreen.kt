@@ -50,7 +50,9 @@ import app.lifeguide.core.ui.AppCard
 import app.lifeguide.core.ui.EntryText
 import app.lifeguide.core.ui.Icons
 import app.lifeguide.core.ui.Labels
+import app.lifeguide.core.ui.XrefSheet
 import app.lifeguide.core.ui.rememberInlineText
+import app.lifeguide.core.ui.rememberXrefNavigator
 import app.lifeguide.core.ui.theme.LocalExtraColors
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -59,6 +61,7 @@ import org.koin.core.parameter.parametersOf
 @Composable
 internal fun EntryScreen(
     id: String,
+    onOpenEntry: (String) -> Unit,
     onOpenSection: (String) -> Unit,
     onBack: () -> Unit,
     vm: EntryViewModel = koinViewModel(key = id) { parametersOf(id) },
@@ -66,6 +69,7 @@ internal fun EntryScreen(
     val ui by vm.ui.collectAsStateWithLifecycle()
     val s = ui as? EntryUi.Ready
     val uri = LocalUriHandler.current
+    val xrefNav = rememberXrefNavigator(onOpenEntry, onOpenSection)
 
     Scaffold(
         topBar = {
@@ -89,6 +93,9 @@ internal fun EntryScreen(
         }
         if (s == null) return@Scaffold
         val e = s.entry
+        // 正文各栏都认交叉引用，同网页 renderCard
+        @Composable fun inline(t: String, urlsLast: Boolean = false) = rememberInlineText(t, s.terms, urlsLast, s.xref, xrefNav::open)
+        @Composable fun Para(t: String) = Text(inline(t), style = MaterialTheme.typography.bodyMedium)
         SelectionContainer(Modifier.padding(pad).fillMaxSize()) {
             Column(
                 Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 24.dp),
@@ -102,14 +109,14 @@ internal fun EntryScreen(
                         modifier = Modifier.clickable { onOpenSection(sec.n) },
                     )
                 }
-                Text(rememberInlineText(e.title, s.terms), style = MaterialTheme.typography.headlineSmall)
+                Text(inline(e.title), style = MaterialTheme.typography.headlineSmall)
                 if (e.who.isNotEmpty()) {
                     Text("适用：" + Labels.who(e.who), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
                 }
 
                 if (e.human.isNotEmpty()) {
                     Text(
-                        rememberInlineText(e.human, s.terms),
+                        inline(e.human),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.fillMaxWidth()
@@ -119,21 +126,21 @@ internal fun EntryScreen(
                 }
                 Overview(e)
 
-                Fold("成本", initiallyOpen = false) { Para(e.cost, s.terms) }
-                Fold("收益", initiallyOpen = true) { SplitRules.splitGain(e.gain).forEach { Para(it, s.terms) } }
+                Fold("成本", initiallyOpen = false) { Para(e.cost) }
+                Fold("收益", initiallyOpen = true) { SplitRules.splitGain(e.gain).forEach { Para(it) } }
                 if (e.note.isNotEmpty()) {
                     Fold(
                         if (e.dispute) "备注 · 有争议" else "备注",
                         initiallyOpen = e.dispute,
                         color = if (e.dispute) LocalExtraColors.current.danger else null,
-                    ) { SplitRules.splitGain(e.note).forEach { Para(it, s.terms) } }
+                    ) { SplitRules.splitGain(e.note).forEach { Para(it) } }
                 }
                 val sources = SplitRules.splitSrc(e.src)
                 Fold("来源", hint = "${sources.size} 条文献", initiallyOpen = false) {
                     sources.forEachIndexed { i, p ->
                         Row {
                             if (sources.size > 1) Text("${i + 1}. ", style = MaterialTheme.typography.bodySmall)
-                            Text(rememberInlineText(p, s.terms, urlsLast = true), style = MaterialTheme.typography.bodySmall)
+                            Text(inline(p, urlsLast = true), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
@@ -146,6 +153,7 @@ internal fun EntryScreen(
             }
         }
     }
+    s?.let { XrefSheet(xrefNav, it.xref.corpus) }
 }
 
 /** 三格速览：要花什么、换回什么、证据多硬。点证据那格展开等级含义 */
@@ -203,11 +211,6 @@ private fun Fold(
         }
         if (open) Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 8.dp)) { content() }
     }
-}
-
-@Composable
-private fun Para(text: String, terms: List<String>) {
-    Text(rememberInlineText(text, terms), style = MaterialTheme.typography.bodyMedium)
 }
 
 /** 底部唯一的主按钮，文案见 docs/ux.md「条目」 */

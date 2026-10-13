@@ -78,6 +78,54 @@ class GoldenTest {
         if (problems.isNotEmpty()) fail(problems.joinToString("\n"))
     }
 
+    /** 交叉引用：每条每个字段里认出的引用、指向的目标，和网页逐处一致 */
+    @Test
+    fun xrefsMatch() {
+        val corpus = Corpus(sections)
+        val problems = mutableListOf<String>()
+        var total = 0
+        val gs = golden.getValue("sections").jsonArray
+        gs.zip(sections).forEach { (g, s) ->
+            val go = g.jsonObject
+            total += checkXrefs("节 ${s.n} 导读", go.getValue("introXrefs").jsonArray, xrefsOf(s.intro, corpus, s.n), problems)
+            go.getValue("entries").jsonArray.zip(s.entries).forEach { (je, e) ->
+                val texts = listOf(e.title, e.cost, e.human) + SplitRules.splitGain(e.gain) + SplitRules.splitGain(e.note) + SplitRules.splitSrc(e.src)
+                total += checkXrefs(e.id, je.jsonObject.getValue("xrefs").jsonArray, xrefsOf(texts, corpus, e.sec), problems)
+            }
+        }
+        assertEquals(golden.getValue("xrefCount").jsonPrimitive.int, total, "引用总数")
+        assertTrue(total > 500, "只认出 $total 处引用，规则可能坏了")
+        if (problems.isNotEmpty()) fail("${problems.size} 处引用不一致：\n" + problems.take(30).joinToString("\n"))
+    }
+
+    /** 对照组：把某一节的「本节」解析错，必须对不上 */
+    @Test
+    fun xrefCheckCatchesWrongSection() {
+        val corpus = Corpus(sections)
+        val s = sections.first { sec -> sec.entries.any { xrefsOf(listOf(it.note), corpus, sec.n).any { x -> "节" !in x.first() } } }
+        val e = s.entries.first { xrefsOf(listOf(it.note), corpus, s.n).any { x -> "节" !in x.first() } }
+        val other = sections.first { it.n != s.n }.n
+        assertTrue(xrefsOf(listOf(e.note), corpus, s.n) != xrefsOf(listOf(e.note), corpus, other), "换了当前节，结果应当不同")
+    }
+
+    private fun xrefsOf(texts: List<String>, corpus: Corpus, sec: String): List<List<String>> =
+        texts.flatMap { t -> InlineMd.parse(t, xref = XrefContext(corpus, sec)) }
+            .filterIsInstance<Inline.Xref>()
+            .map { x ->
+                listOf(x.text) + x.targets.map {
+                    when (it) {
+                        is XrefTarget.ToEntry -> it.id
+                        is XrefTarget.ToSection -> "s" + it.n
+                    }
+                }
+            }
+
+    private fun checkXrefs(where: String, want: JsonArray, got: List<List<String>>, problems: MutableList<String>): Int {
+        val w = want.map { a -> a.jsonArray.map { it.jsonPrimitive.content } }
+        if (w != got) problems += "$where：\n  js=$w\n  kt=$got"
+        return got.size
+    }
+
     /** 对照组：比对函数本身要抓得住改动，否则上面的「全部一致」不能信 */
     @Test
     fun diffCatchesChanges() {

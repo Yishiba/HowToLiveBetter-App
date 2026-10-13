@@ -6,6 +6,7 @@ import app.lifeguide.core.corpus.Entry
 import app.lifeguide.core.corpus.Filter
 import app.lifeguide.core.corpus.FilterState
 import app.lifeguide.core.corpus.Section
+import app.lifeguide.core.corpus.XrefContext
 import app.lifeguide.core.data.CorpusRepository
 import app.lifeguide.core.data.UserPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +18,13 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-data class SectionUi(val section: Section, val entries: List<Entry>, val newKeys: Set<String>)
+data class SectionUi(
+    val section: Section,
+    val entries: List<Entry>,
+    val newKeys: Set<String>,
+    /** 导读里「见第 X 节」「本节第 Y 条」的解析用 */
+    val xref: XrefContext,
+)
 
 /** 一节的条目列表。筛选条件只在这一页有效，离开就清空，不影响查找页。 */
 class SectionViewModel(
@@ -30,7 +37,7 @@ class SectionViewModel(
 
     val ui: StateFlow<SectionUi?> = combine(corpusRepository.state.filterNotNull(), _filter, prefs.recentChanges) { loaded, f, changes ->
         val s = loaded.corpus.sectionByN[n] ?: return@combine null
-        SectionUi(s, Filter.apply(s.entries, f), changes?.changes?.let { (it.added + it.changed).toSet() }.orEmpty())
+        SectionUi(s, Filter.apply(s.entries, f), changes?.changes?.let { (it.added + it.changed).toSet() }.orEmpty(), XrefContext(loaded.corpus, n))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     init {

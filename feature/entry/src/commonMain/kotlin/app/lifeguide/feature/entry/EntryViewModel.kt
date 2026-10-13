@@ -7,6 +7,7 @@ import app.lifeguide.core.corpus.FilterState
 import app.lifeguide.core.corpus.InlineMd
 import app.lifeguide.core.corpus.Links
 import app.lifeguide.core.corpus.Section
+import app.lifeguide.core.corpus.XrefContext
 import app.lifeguide.core.data.CorpusRepository
 import app.lifeguide.core.data.ChecklistRepository
 import app.lifeguide.core.data.FilterRepository
@@ -33,6 +34,8 @@ sealed interface EntryUi {
         val inList: Boolean,
         val done: Boolean,
         val addedByUser: Boolean,
+        /** 解析正文里「见第 X 节第 Y 条」用 */
+        val xref: XrefContext,
     ) : EntryUi
 }
 
@@ -50,7 +53,7 @@ class EntryViewModel(
             val e = corpus.entry(id) ?: return@flatMapLatest flowOf(EntryUi.Missing)
             // 从搜索结果进来时，条目页也高亮同样的词
             checklist.stateOf(e).map { st ->
-                EntryUi.Ready(e, corpus.sectionByN[e.sec], FilterState(q = q).terms, st.inList, st.done, st.addedByUser)
+                EntryUi.Ready(e, corpus.sectionByN[e.sec], FilterState(q = q).terms, st.inList, st.done, st.addedByUser, XrefContext(corpus, e.sec))
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EntryUi.Loading)
 
