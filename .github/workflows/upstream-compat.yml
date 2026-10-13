@@ -1,0 +1,61 @@
+name: 上游正文兼容性
+
+# 原书作者几乎每天改正文。每天拿上游最新的 main 跑一遍对拍和更新校验：
+# 格式变了、解析和网页对不上、App 的更新校验会拒收，都会在用户碰到之前报出来。
+on:
+  schedule:
+    - cron: '0 1 * * *'   # 每天北京时间 09:00
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: 子模块切到上游最新的 main
+        id: upstream
+        run: |
+          git -C upstream fetch origin main
+          git -C upstream checkout FETCH_HEAD
+          echo "sha=$(git -C upstream rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "date=$(git -C upstream log -1 --format=%cI)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: gradle/actions/setup-gradle@v4
+      - name: 对拍与更新校验
+        run: ./gradlew :core:corpus:jvmTest :core:data:jvmTest --continue
+      - name: 按测试报告判成败
+        if: always()
+        run: tools/ci/check-test-results.sh core/corpus core/data
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results
+          path: '**/build/test-results/jvmTest/*.xml'
+      - name: 失败时开 issue（已有未关闭的就追加评论）
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.upstream.outputs.sha }}
+          DATE: ${{ steps.upstream.outputs.date }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          body="上游 \`${SHA:0:7}\`（${DATE}）没通过兼容性检查，详情见 ${RUN}"
+          gh label create upstream-compat --color D93F0B --description "上游正文兼容性检查失败" 2>/dev/null || true
+          n=$(gh issue list --label upstream-compat --state open --json number --jq '.[0].number')
+          if [ -n "$n" ]; then
+            gh issue comment "$n" --body "$body"
+          else
+            gh issue create --title "上游正文兼容性检查失败" --label upstream-compat --body "$body"
+          fi

@@ -94,6 +94,14 @@ FilterRepository（筛选条件 + 搜索词，持久化到 UserPreferences）─
 | `InlineMdTest` | `core/corpus` | 行内 Markdown 切分 |
 | `CorpusUpdaterTest` | `core/data` | 镜像回退、截断下载、全部镜像挂掉、远端更旧 |
 | `CorpusRepositoryTest` | `core/data` | 内置版与下载版之间的选择、旧快照清理、并发只加载一次 |
+| `UpstreamAcceptanceTest` | `core/data` | 这份正文能通过 App 联网更新时的校验（上游格式一变，两边解析会一起错，对拍照样通过，只有这条能抓到） |
 | `KoinGraphTest` | `shared` | 依赖图完整；内置正文确实打进了资源 |
 
-判断成败看 `tools/ci/check-test-results.sh`（读 JUnit XML，要求用例数大于 0、失败数为 0），不只看 Gradle 的退出码。CI 配置在 `.github/workflows/ci.yml`。
+判断成败看 `tools/ci/check-test-results.sh`（读 JUnit XML，要求用例数大于 0、失败数为 0），不只看 Gradle 的退出码。CI 配置在 `.github/workflows/`：
+
+| 工作流 | 何时跑 | 做什么 |
+|---|---|---|
+| `ci.yml` | 推送到 main、提 PR | 全部单元测试、Android 调试包、iOS 模拟器构建 |
+| `upstream-compat.yml` | 每天北京时间 09:00，也可手动触发 | 把 `upstream/` 换成上游最新的 main，跑 `core/corpus`、`core/data` 的测试；失败时开一个带 `upstream-compat` 标签的 issue，已有未关闭的就追加评论 |
+
+夜间任务报警后：先看是上游改了格式，还是改了解析规则（`index.html`），照着改 Kotlin 端，测试通过后按 README 的步骤升级内置正文。
