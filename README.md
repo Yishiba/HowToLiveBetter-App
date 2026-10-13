@@ -22,7 +22,7 @@
 
 ## 解析器为什么可信
 
-`CorpusParser`、`SplitRules`、`Filter`、`Xref` 逐行移植自上游 `index.html` 的 `parseReadme()`、`<split-rules>`、`apply()`/`fitsMe()`、`XREF_RE`/`xrefKeys`。`:core:corpus:jvmTest` 拿上游原函数跑出来的 golden 逐字段比对全部条目、17 组筛选和全书的交叉引用；`diffCatchesChanges` 是比对函数自己的对照组。上游改了解析或拆分规则，测试会红。
+`CorpusParser`、`SplitRules`、`Filter`、`Xref`、`Glossary` 逐行移植自上游 `index.html` 的 `parseReadme()`、`<split-rules>`、`apply()`/`fitsMe()`、`XREF_RE`/`xrefKeys`、`parseGlossary()`/`termify()`。`:core:corpus:jvmTest` 拿上游原函数跑出来的 golden 逐字段比对全部条目、17 组筛选、全书的交叉引用和术语（术语有一处故意不同，见 [docs/ux.md](docs/ux.md)「术语」）；`diffCatchesChanges` 是比对函数自己的对照组。上游改了解析或拆分规则，测试会红。
 
 ## 常用命令
 

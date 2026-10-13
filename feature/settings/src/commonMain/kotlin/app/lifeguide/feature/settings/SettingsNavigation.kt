@@ -13,8 +13,18 @@ data object SettingsRoute
 
 fun NavController.navigateToSettings() = navigate(SettingsRoute)
 
-fun NavGraphBuilder.settingsScreen(snackbar: SnackbarHostState, onBack: () -> Unit) {
-    composable<SettingsRoute> { SettingsScreen(snackbar = snackbar, onBack = onBack) }
+/** 术语表 */
+@Serializable
+data object GlossaryRoute
+
+fun NavController.navigateToGlossary() = navigate(GlossaryRoute)
+
+fun NavGraphBuilder.glossaryScreen(onBack: () -> Unit) {
+    composable<GlossaryRoute> { GlossaryScreen(onBack = onBack) }
+}
+
+fun NavGraphBuilder.settingsScreen(snackbar: SnackbarHostState, onOpenGlossary: () -> Unit, onBack: () -> Unit) {
+    composable<SettingsRoute> { SettingsScreen(snackbar = snackbar, onOpenGlossary = onOpenGlossary, onBack = onBack) }
 }
 
 val settingsModule = module {

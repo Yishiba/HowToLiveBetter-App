@@ -98,6 +98,55 @@ class GoldenTest {
         if (problems.isNotEmpty()) fail("${problems.size} 处引用不一致：\n" + problems.take(30).joinToString("\n"))
     }
 
+    /** 术语表：解析出的术语、顺序（长词在前）和网页一致 */
+    @Test
+    fun glossaryParsesLikeWeb() {
+        val want = golden.getValue("glossary").jsonArray.map { it.jsonObject.let { o -> Triple(o.str("term"), o.str("meaning"), o.getValue("latin").jsonPrimitive.boolean) } }
+        val got = glossary.terms.sortedByDescending { it.term.length }.map { Triple(it.term, it.meaning, it.latin) }
+        assertEquals(want, got)
+        assertTrue(got.size >= 30, "只解析出 ${got.size} 个术语")
+    }
+
+    /**
+     * 正文里认出的术语和网页一致，只扣掉 App 故意加严的那一处：单个字母的术语后面要紧跟比较符号（见 [Glossary]）。
+     * 网页的每处匹配带着后面几个字，这里用同一条规则算出期望值。
+     */
+    @Test
+    fun glossaryMatchesLikeWebExceptSingleLetters() {
+        val corpus = Corpus(sections, glossary)
+        val problems = mutableListOf<String>()
+        var total = 0
+        var dropped = 0
+        golden.getValue("sections").jsonArray.zip(sections).forEach { (g, s) ->
+            g.jsonObject.getValue("entries").jsonArray.zip(s.entries).forEach { (je, e) ->
+                val js = je.jsonObject.getValue("terms").jsonArray.map { it.jsonArray.let { a -> a[0].jsonPrimitive.content to a[1].jsonPrimitive.content } }
+                val want = js.filter { (t, after) -> t.length > 1 || Glossary.isComparison(after, 0) }.map { it.first }
+                dropped += js.size - want.size
+                val texts = listOf(e.title, e.cost, e.human) + SplitRules.splitGain(e.gain) + SplitRules.splitGain(e.note) + SplitRules.splitSrc(e.src)
+                val got = texts.flatMap { t -> glossaryTermsIn(t, corpus, e.sec) }
+                total += got.size
+                if (want != got) problems += "${e.id}：\n  js=$want\n  kt=$got"
+            }
+        }
+        if (problems.isNotEmpty()) fail("${problems.size} 条术语不一致：\n" + problems.take(30).joinToString("\n"))
+        assertTrue(total > 500, "只认出 $total 处术语")
+        // 扣掉的应当正好是克数、利率这类单字母误认，几十处，不该是几百处
+        assertTrue(dropped in 1..100, "单字母规则扣掉了 $dropped 处")
+    }
+
+    private val glossary by lazy { Glossary.parse(readme) }
+
+    /** 和界面一样：普通文字、粗体、引用文字里认术语，链接里不认 */
+    private fun glossaryTermsIn(text: String, corpus: Corpus, sec: String): List<String> =
+        InlineMd.parse(text, xref = XrefContext(corpus, sec)).flatMap { p ->
+            when (p) {
+                is Inline.Text -> corpus.glossary.find(p.text)
+                is Inline.Bold -> corpus.glossary.find(p.text)
+                is Inline.Xref -> corpus.glossary.find(p.text)
+                is Inline.Link, is Inline.Url -> emptyList()
+            }
+        }.map { it.second.term }
+
     /** 对照组：把某一节的「本节」解析错，必须对不上 */
     @Test
     fun xrefCheckCatchesWrongSection() {

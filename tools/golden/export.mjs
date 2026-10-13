@@ -150,8 +150,69 @@ for (const s of outSections) {
   }
 }
 
-const golden = { files, sectionCount: outSections.length, entryCount: entries.length, sections: outSections, filters: FILTERS, xrefCount };
+// ---------- 术语表：README「读懂数字」那张表，正文里出现的术语可以点开看解释 ----------
+// parseGlossary 原样抠出来跑。termifyPieces 照 renderText + termify 的结果：termify 只走 DOM 里的文字节点，
+// 链接（a）里的跳过；没有搜索词时，每段普通文字、每处粗体、每处引用的文字各是一个文字节点。改动时要对照着改。
+const gcode = [
+  grab(/^function parseGlossary\(md\)\{[\s\S]*?\n\}/m, 'parseGlossary()'),
+  grab(/^let GLOSS_RE = .*$/m, 'GLOSS_RE'),
+  'this.parseGlossary = parseGlossary; this.gloss = () => [GLOSS_RE, GLOSS_BY];',
+].join('\n');
+const gx = {};
+vm.runInNewContext(gcode, gx);
+const glossary = gx.parseGlossary(readme);
+const [GLOSS_RE, GLOSS_BY] = gx.gloss();
+
+function xrefPieces(s, cur) {
+  const out = [];
+  let last = 0, m;
+  x.XREF_RE.lastIndex = 0;
+  while ((m = x.XREF_RE.exec(s))) {
+    const keys = m[5] != null
+      ? String(m[5]).split('、').map(v => v.trim()).filter(v => x.SECS.has(v))
+      : x.xrefKeys(m[1] ?? cur, m[2] ?? m[3] ?? m[4] ?? '');
+    if (!keys.length) continue;
+    out.push(s.slice(last, m.index), m[0]);
+    last = m.index + m[0].length;
+  }
+  out.push(s.slice(last));
+  return out;
+}
+function textNodes(text, cur) {
+  const out = [];
+  let last = 0, m;
+  const plain = seg => { if (seg) out.push(...xrefPieces(x.unescMd(seg), cur)); };
+  x.LINK_RE.lastIndex = 0;
+  while ((m = x.LINK_RE.exec(text))) {
+    plain(text.slice(last, m.index));
+    last = m.index + m[0].length;
+    if (m[4] !== undefined) { out.push(x.unescMd(m[4])); continue; }
+    if (m[3]) { plain(x.trimUrl(m[3])[1]); continue; }
+  }
+  plain(text.slice(last));
+  return out;
+}
+function termsIn(texts, cur) {
+  const found = [];
+  for (const t of texts) for (const node of textNodes(t, cur)) {
+    let m;
+    GLOSS_RE.lastIndex = 0;
+    // 带上紧跟在后面的几个字：App 对单个字母的术语（d、g、r）加了一条规则，测试要据此算出期望值
+    while ((m = GLOSS_RE.exec(node))) if (GLOSS_BY[m[0]]) found.push([m[0], node.slice(m.index + m[0].length, m.index + m[0].length + 4)]);
+  }
+  return found;
+}
+let termCount = 0;
+for (const s of outSections) for (const e of s.entries) {
+  e.terms = termsIn([e.title, e.cost, e.human, ...e.gainChunks, ...e.noteChunks, ...e.srcParts], e.sec);
+  termCount += e.terms.length;
+}
+
+const golden = {
+  files, sectionCount: outSections.length, entryCount: entries.length, sections: outSections, filters: FILTERS, xrefCount,
+  glossary: glossary.map(g => ({ term: g.term, meaning: g.meaning, latin: g.latin })), termCount,
+};
 mkdirSync(dirname(resolve(out)), { recursive: true });
 writeFileSync(out, JSON.stringify(golden));
 console.log(`golden：${files.length} 个文件，${outSections.length} 节，${entries.length} 条，${FILTERS.length} 组筛选`
-  + `（${FILTERS.map(f => f.ids.length).join('/')}），${xrefCount} 处交叉引用`);
+  + `（${FILTERS.map(f => f.ids.length).join('/')}），${xrefCount} 处交叉引用，${glossary.length} 个术语在正文里出现 ${termCount} 次`);

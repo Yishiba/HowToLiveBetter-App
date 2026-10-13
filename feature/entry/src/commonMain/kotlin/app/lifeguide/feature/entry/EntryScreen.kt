@@ -34,6 +34,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -44,12 +45,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.lifeguide.core.corpus.Entry
+import app.lifeguide.core.corpus.GlossaryTerm
 import app.lifeguide.core.corpus.Links
 import app.lifeguide.core.corpus.SplitRules
 import app.lifeguide.core.ui.AppCard
 import app.lifeguide.core.ui.EntryText
 import app.lifeguide.core.ui.Icons
 import app.lifeguide.core.ui.Labels
+import app.lifeguide.core.ui.RichText
+import app.lifeguide.core.ui.TermSheet
 import app.lifeguide.core.ui.XrefSheet
 import app.lifeguide.core.ui.rememberInlineText
 import app.lifeguide.core.ui.rememberXrefNavigator
@@ -63,6 +67,7 @@ internal fun EntryScreen(
     id: String,
     onOpenEntry: (String) -> Unit,
     onOpenSection: (String) -> Unit,
+    onOpenGlossary: () -> Unit,
     onBack: () -> Unit,
     vm: EntryViewModel = koinViewModel(key = id) { parametersOf(id) },
 ) {
@@ -70,6 +75,7 @@ internal fun EntryScreen(
     val s = ui as? EntryUi.Ready
     val uri = LocalUriHandler.current
     val xrefNav = rememberXrefNavigator(onOpenEntry, onOpenSection)
+    var term by remember { mutableStateOf<GlossaryTerm?>(null) }
 
     Scaffold(
         topBar = {
@@ -93,9 +99,10 @@ internal fun EntryScreen(
         }
         if (s == null) return@Scaffold
         val e = s.entry
-        // 正文各栏都认交叉引用，同网页 renderCard
-        @Composable fun inline(t: String, urlsLast: Boolean = false) = rememberInlineText(t, s.terms, urlsLast, s.xref, xrefNav::open)
-        @Composable fun Para(t: String) = Text(inline(t), style = MaterialTheme.typography.bodyMedium)
+        // 正文各栏都认交叉引用和术语，同网页 renderCard
+        @Composable fun inline(t: String, urlsLast: Boolean = false) =
+            rememberInlineText(t, s.terms, urlsLast, s.xref, xrefNav::open, s.xref.corpus.glossary) { term = it }
+        @Composable fun Para(t: String) = RichText(inline(t), style = MaterialTheme.typography.bodyMedium)
         SelectionContainer(Modifier.padding(pad).fillMaxSize()) {
             Column(
                 Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 24.dp),
@@ -109,13 +116,13 @@ internal fun EntryScreen(
                         modifier = Modifier.clickable { onOpenSection(sec.n) },
                     )
                 }
-                Text(inline(e.title), style = MaterialTheme.typography.headlineSmall)
+                RichText(inline(e.title), style = MaterialTheme.typography.headlineSmall)
                 if (e.who.isNotEmpty()) {
                     Text("适用：" + Labels.who(e.who), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
                 }
 
                 if (e.human.isNotEmpty()) {
-                    Text(
+                    RichText(
                         inline(e.human),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -140,7 +147,7 @@ internal fun EntryScreen(
                     sources.forEachIndexed { i, p ->
                         Row {
                             if (sources.size > 1) Text("${i + 1}. ", style = MaterialTheme.typography.bodySmall)
-                            Text(inline(p, urlsLast = true), style = MaterialTheme.typography.bodySmall)
+                            RichText(inline(p, urlsLast = true), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
@@ -154,6 +161,7 @@ internal fun EntryScreen(
         }
     }
     s?.let { XrefSheet(xrefNav, it.xref.corpus) }
+    term?.let { t -> TermSheet(t, onDismiss = { term = null }, onOpenGlossary = { term = null; onOpenGlossary() }) }
 }
 
 /** 三格速览：要花什么、换回什么、证据多硬。点证据那格展开等级含义 */

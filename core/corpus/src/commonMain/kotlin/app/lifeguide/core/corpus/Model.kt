@@ -38,7 +38,8 @@ data class Entry(
     val id: String get() = "$sec-$n"
 }
 
-class Corpus(val sections: List<Section>) {
+/** 全书：各节，加上 README 里的术语表 */
+class Corpus(val sections: List<Section>, val glossary: Glossary = Glossary.EMPTY) {
     val entries: List<Entry> = sections.flatMap { it.entries }
     val sectionByN: Map<String, Section> = sections.associateBy { it.n }
     private val byId = entries.associateBy { it.id }

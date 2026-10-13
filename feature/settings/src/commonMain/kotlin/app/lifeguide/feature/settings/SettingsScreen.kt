@@ -55,6 +55,7 @@ internal const val DISCLAIMER =
 @Composable
 internal fun SettingsScreen(
     snackbar: SnackbarHostState,
+    onOpenGlossary: () -> Unit,
     onBack: () -> Unit,
     vm: SettingsViewModel = koinViewModel(),
 ) {
@@ -99,6 +100,10 @@ internal fun SettingsScreen(
                     Text("  正在检查")
                 } else Text("现在检查更新")
             }
+
+            HorizontalDivider()
+            Heading("读懂数字")
+            LinkRow("术语表：HR、95% CI、荟萃分析……", external = false, onClick = onOpenGlossary)
 
             HorizontalDivider()
             Heading("外观")
@@ -152,12 +157,12 @@ private fun Body(t: String, modifier: Modifier = Modifier) =
     Text(t, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = modifier)
 
 @Composable
-private fun LinkRow(t: String, onClick: () -> Unit) = Row(
+private fun LinkRow(t: String, external: Boolean = true, onClick: () -> Unit) = Row(
     Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
     verticalAlignment = Alignment.CenterVertically,
 ) {
     Text(t, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
-    Icon(Icons.OpenInNew, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+    Icon(if (external) Icons.OpenInNew else Icons.ChevronRight, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
 }
 
 /** 「我的情况」的选项：取自筛选里「我的情况」那组，去掉「以上都不是」 */

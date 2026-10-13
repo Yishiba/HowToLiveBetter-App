@@ -40,6 +40,8 @@ import app.lifeguide.feature.find.findScreen
 import app.lifeguide.feature.find.navigateToSection
 import app.lifeguide.feature.find.sectionScreen
 import app.lifeguide.feature.settings.OnboardingScreen
+import app.lifeguide.feature.settings.glossaryScreen
+import app.lifeguide.feature.settings.navigateToGlossary
 import app.lifeguide.feature.settings.navigateToSettings
 import app.lifeguide.feature.settings.settingsScreen
 import org.koin.compose.viewmodel.koinViewModel
@@ -97,8 +99,14 @@ private fun Main(snackbar: SnackbarHostState) {
             checklistScreen(onOpenEntry = nav::navigateToEntry, onOpenSettings = nav::navigateToSettings)
             findScreen(onOpenSection = nav::navigateToSection, onOpenEntry = nav::navigateToEntry)
             sectionScreen(onOpenEntry = nav::navigateToEntry, onOpenSection = nav::navigateToSection, onBack = { nav.popBackStack() })
-            entryScreen(onOpenEntry = nav::navigateToEntry, onOpenSection = nav::navigateToSection, onBack = { nav.popBackStack() })
-            settingsScreen(snackbar, onBack = { nav.popBackStack() })
+            entryScreen(
+                onOpenEntry = nav::navigateToEntry,
+                onOpenSection = nav::navigateToSection,
+                onOpenGlossary = nav::navigateToGlossary,
+                onBack = { nav.popBackStack() },
+            )
+            settingsScreen(snackbar, onOpenGlossary = nav::navigateToGlossary, onBack = { nav.popBackStack() })
+            glossaryScreen(onBack = { nav.popBackStack() })
         }
     }
 }

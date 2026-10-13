@@ -2,6 +2,7 @@ package app.lifeguide.core.data
 
 import app.lifeguide.core.corpus.Corpus
 import app.lifeguide.core.corpus.CorpusParser
+import app.lifeguide.core.corpus.Glossary
 import app.lifeguide.core.corpus.Section
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,17 +41,18 @@ class CorpusRepository(private val store: CorpusStore, private val bundled: Bund
         val downloaded = store.activeManifest()
         if (downloaded != null && downloaded.isNewerThan(bundledManifest)) {
             val parsed = runCatching {
-                CorpusParser.parseFiles(store.read(downloaded.commit, "README.md")) { store.read(downloaded.commit, it) }
+                val readme = store.read(downloaded.commit, "README.md")
+                Corpus(CorpusParser.parseFiles(readme) { store.read(downloaded.commit, it) }, Glossary.parse(readme))
             }.getOrNull()
-            if (parsed != null && CorpusValidator.check(parsed, minEntries = 1) == null) {
-                return LoadedCorpus(Corpus(parsed), downloaded, CorpusSource.Downloaded)
+            if (parsed != null && CorpusValidator.check(parsed.sections, minEntries = 1) == null) {
+                return LoadedCorpus(parsed, downloaded, CorpusSource.Downloaded)
             }
         }
         if (downloaded != null) store.clear()
         val readme = bundled.read("README.md")
         val files = CorpusParser.bookFiles(readme).associateWith { bundled.read(it) }
         val sections = CorpusParser.parseFiles(readme) { files.getValue(it) }
-        return LoadedCorpus(Corpus(sections), bundledManifest, CorpusSource.Bundled)
+        return LoadedCorpus(Corpus(sections, Glossary.parse(readme)), bundledManifest, CorpusSource.Bundled)
     }
 }
 
