@@ -21,11 +21,15 @@ echo "用 ${apksigner}"
 if ! out=$("$apksigner" verify --print-certs "$apk" 2>&1); then
   echo "✗ ${apk} 没签名或签名无效："; echo "$out"; exit 1
 fi
-got=$( (grep -m1 'Signer #1 certificate SHA-256 digest:' <<<"${out}" || true) | awk '{print $NF}')
-if [ -z "${got}" ]; then
+# 各版本 apksigner 的写法不同：36 及以前是「Signer #1 certificate SHA-256 digest: …」，
+# 37 起是「V2 Signer: certificate SHA-256 digest: …」（每种签名方案各一行）。只认「certificate SHA-256 digest:」这段，
+# 并要求每一行都是登记的那一个
+digests=$( (grep 'certificate SHA-256 digest:' <<<"${out}" || true) | awk '{print $NF}' | tr 'A-F' 'a-f' | sort -u)
+if [ -z "${digests}" ]; then
   echo "✗ apksigner 的输出里没找到证书指纹，原样输出如下："; echo "${out}"; exit 1
 fi
-if [ "$got" != "$want" ]; then
-  echo "✗ 签名证书不对：得到 ${got}，登记的是 ${want}"; exit 1
+if [ "${digests}" != "${want}" ]; then
+  echo "✗ 签名证书不对。得到："; echo "${digests}"; echo "登记的是：${want}"; exit 1
 fi
+got="${digests}"
 echo "✓ ${apk} 已签名，证书指纹与登记的一致（${got:0:16}…）"
