@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 界面全由 Compose 画，主题只管启动那一瞬：窗口底色和 App 页面底色一致，免得闪一下别的颜色 -->
+    <style name="Theme.LifeGuide" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+</resources>
