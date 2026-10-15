@@ -1,0 +1,82 @@
+name: 发版
+
+# 推一个 v主.次.修订 的 tag（例如 v0.1.0）就发一版：跑全部测试，出签名的 APK，验签，挂到 GitHub Release。
+# 需要的 Secrets 和变量见 docs/release.md。
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  android:
+    name: 签名 APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: 版本号
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "tag 要写成 v主.次.修订，现在是 $GITHUB_REF_NAME"; exit 1; }
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+
+      - name: 测试（含与上游网页 JS 的对拍）
+        run: ./gradlew jvmTest
+      - name: 按测试报告判成败
+        run: tools/ci/check-test-results.sh core/corpus core/data shared
+
+      - name: 取出签名密钥
+        env:
+          KEYSTORE_BASE64: ${{ secrets.LIFEGUIDE_KEYSTORE_BASE64 }}
+        run: |
+          [ -n "$KEYSTORE_BASE64" ] || { echo "没配 Secret LIFEGUIDE_KEYSTORE_BASE64，见 docs/release.md"; exit 1; }
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "LIFEGUIDE_KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      - name: 出签名 APK
+        env:
+          LIFEGUIDE_KEYSTORE_PASSWORD: ${{ secrets.LIFEGUIDE_KEYSTORE_PASSWORD }}
+          LIFEGUIDE_KEY_ALIAS: ${{ secrets.LIFEGUIDE_KEY_ALIAS }}
+          LIFEGUIDE_KEY_PASSWORD: ${{ secrets.LIFEGUIDE_KEY_PASSWORD }}
+        run: ./gradlew :androidApp:assembleRelease -PversionName="$VERSION"
+
+      - name: 验签（证书必须是登记过的那一个）
+        run: tools/ci/verify-apk.sh androidApp/build/outputs/apk/release/androidApp-release.apk "${{ vars.RELEASE_CERT_SHA256 }}"
+
+      - name: 整理产物
+        run: |
+          mkdir -p dist
+          cp androidApp/build/outputs/apk/release/androidApp-release.apk "dist/LifeGuide-$VERSION.apk"
+          # 混淆映射表：用户报崩溃时把堆栈还原成源码位置要用，代码本来就开源，公开无妨
+          cp androidApp/build/outputs/mapping/release/mapping.txt "dist/mapping-$VERSION.txt"
+          cd dist && sha256sum "LifeGuide-$VERSION.apk" > "LifeGuide-$VERSION.apk.sha256"
+
+      - name: 发布到 GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          upstream=$(git -C upstream rev-parse --short HEAD)
+          notes="内置正文：上游 ${upstream}。安装后会自动联网更新到最新正文。
+
+          校验：\`sha256sum -c LifeGuide-$VERSION.apk.sha256\`；签名证书 SHA-256 指纹应为 \`${{ vars.RELEASE_CERT_SHA256 }}\`。"
+          gh release create "$GITHUB_REF_NAME" dist/* --title "$GITHUB_REF_NAME" --notes "$notes" --generate-notes
+
+      - name: 清掉密钥文件
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks"

@@ -40,6 +40,10 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project ios
 
 判测试成败看测试报告（上面那个脚本），不只看 BUILD SUCCESSFUL。克隆时带上子模块：`git clone --recurse-submodules`。
 
+## 发版
+
+推一个 `v主.次.修订` 的 tag，CI 会跑测试、出签名 APK、验签并发到 GitHub Release。第一次发版前要准备密钥，步骤见 [docs/release.md](docs/release.md)。
+
 ## 升级内置正文
 
 ```bash
